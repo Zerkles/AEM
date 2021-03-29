@@ -8,6 +8,7 @@ class LocalSearchSolver:
     def __init__(self, g:nx.DiGraph,distance_matrix:np.matrix):
         self.g = g
         self.dm = distance_matrix
+        self.start_node, self.unused_nodes = self.create_random_route()
     
     def __find_nn(node:int, nodes_list:list, distance_matrix:np.matrix):
         nn= nodes_list[0]
@@ -38,8 +39,6 @@ class LocalSearchSolver:
 
     def __replace_nodes(self, n1,n2):
         g = self.g
-        print(n1,n2)
-        print(n1,tuple(g.in_edges(n1)),tuple(g.out_edges(n1)))
         n1_prev,n1_next = tuple(g.in_edges(n1))[0][0],tuple(g.out_edges(n1))[0][1]
 
         g.remove_edge(n1_prev,n1)
@@ -53,6 +52,10 @@ class LocalSearchSolver:
         n1_prev,n1_next = tuple(g.in_edges(n1))[0][0],tuple(g.out_edges(n1))[0][1]
         n2_prev,n2_next = tuple(g.in_edges(n2))[0][0],tuple(g.out_edges(n2))[0][1]
 
+        if n1 == n2_prev:
+            n1_next = n1
+            n2_prev=n2
+
         g.remove_edge(n1_prev,n1)
         g.remove_edge(n1,n1_next)
         g.remove_edge(n2_prev,n2)
@@ -63,8 +66,36 @@ class LocalSearchSolver:
         g.add_edge(n2_prev,n1)
         g.add_edge(n1,n2_next)
 
-    def __exchange_route_edges(e1,e2):
-        pass
+    def __reorder_edge(self,e1,e2): # e1 początek krawędzi, e2 koniec
+        g= self.g
+        e1_prev = tuple(g.in_edges(e1))[0][0]
+        e2_next = tuple(g.out_edges(e2))[0][1]
+
+        g.remove_edge(e1_prev,e1)
+        g.remove_edge(e2,e2_next)
+
+        e_list = []
+        e = e1
+        while e != e2:
+            e_list.append(list(g.out_edges(e))[0])
+            e = tuple(g.out_edges(e))[0][1]
+
+        for e,ee in e_list:
+            g.remove_edge(e,ee)
+            g.add_edge(ee,e)
+
+        g.add_edge(e1_prev,e2)
+        g.add_edge(e1,e2_next)
+
+    def __delta_reorder_edge(self,e1,e2):
+        g,dm= self.g,self.dm
+        e1_prev = tuple(g.in_edges(e1))[0][0]
+        e2_next = tuple(g.out_edges(e2))[0][1]
+
+        old_distance = dm[e1_prev-1,e1-1] + dm[e2-1,e2_next-1]
+        new_distance = dm[e1_prev-1,e2-1] + dm[e1-1,e2_next-1]
+
+        return new_distance - old_distance
 
     def __delta_reorder_nodes(self, n1,n2):
         g,dm = self.g,self.dm
@@ -72,10 +103,16 @@ class LocalSearchSolver:
         n1_prev,n1_next = tuple(g.in_edges(n1))[0][0],tuple(g.out_edges(n1))[0][1]
         n2_prev,n2_next = tuple(g.in_edges(n2))[0][0],tuple(g.out_edges(n2))[0][1]
 
+        if n1 == n2_prev:
+            n1_next = n1
+            n2_prev=n2
+
+
+
         old_distance = dm[n1_prev-1,n1-1] +dm[n2_prev-1,n2-1] + dm[n2-1,n2_next-1] + dm[n1-1,n1_next-1]
         new_distance = dm[n1_prev-1,n2-1] +dm[n2_prev-1,n1-1] + dm[n2-1,n1_next-1] + dm[n1-1,n2_next-1]
 
-        return old_distance - new_distance
+        return new_distance - old_distance
 
     def __delta_replace_nodes(self, n1,n2): # n1 jest w ścieżce, n2 nie
         g,dm = self.g,self.dm
@@ -85,7 +122,7 @@ class LocalSearchSolver:
         old_distance = dm[n1_prev-1,n1-1] +dm[n1-1,n1_next-1]
         new_distance = dm[n1_prev-1,n2-1] +dm[n2-1,n1_next-1]
 
-        return old_distance - new_distance
+        return new_distance - old_distance
 
     def __get_objective_function_value(self):
         g,dm = self.g,self.dm
@@ -97,8 +134,8 @@ class LocalSearchSolver:
         return sum
 
     def create_random_route(self):
-        g,dm = self.g, self.dm
-        
+        g = self.g
+
         g.clear_edges()
         unused_nodes = list(g.nodes)
         start_node = node = random.choice(unused_nodes)
@@ -111,70 +148,210 @@ class LocalSearchSolver:
             node = new_node
         g.add_edge(node, start_node)
 
-        return unused_nodes
+        self.show_graph(self.g,"random_route.png")
+        return start_node, unused_nodes
 
     def random_alg():
         pass
 
     def streepest_nodes(self):
-        g,dm = self.g,self.dm
-        unused_nodes = self.create_random_route()
-        used_nodes = list(g.nodes - unused_nodes)
+        g = self.g
+        g_copy = self.g.copy()
+        start_node, unused_nodes = self.start_node, self.unused_nodes.copy()
 
         route_len = self.__get_objective_function_value()
-        print("Route length:", route_len)
-
-        best_move1, best_move2 = (0,0,-1),(0,0,-1)
-        while best_move1[2]<0 or best_move2[2]<0:
-            # format: (wierzchołek1,wierzchołek2,wartość delty funkcji celu)
-            best_move1, best_move2 = (0,0,0),(0,0,0)
-            for n1 in used_nodes:
-                for n2 in used_nodes:
-                    if n1==n2:
-                        continue
-                    # zamiana wierzchołków będącychw grafie
-                    delta = self.__delta_reorder_nodes(n1,n2)
+        print("Route length:", route_len) 
+        
+        while True:
+            best_move1, best_move2 = (0,0,0),(0,0,0) # format: (wierzchołek1,wierzchołek2,wartość delty funkcji celu)
+            n1 = start_node
+            while True:
+                n2 = tuple(g.out_edges(n1))[0][1]
+                n1_prev = tuple(g.in_edges(n1))[0][0]
+                while n2 != n1_prev:
+                    delta = self.__delta_reorder_nodes(n1,n2) # zamiana wierzchołków będących w grafie
                     if best_move1[2]>delta:
                         best_move1 = (n1,n2,delta)
+                    n2 = tuple(g.out_edges(n2))[0][1]
                 
+                n1 = tuple(g.out_edges(n1))[0][1]
+                if n1 == start_node:
+                    break
+            
                 for n2 in unused_nodes:
                     if n1==n2:
                         continue
-                    # wyrzucenie wierzchołka i dodanie jednego spoza grafu
-                    delta = self.__delta_replace_nodes(n1,n2)
+                    
+                    delta = self.__delta_replace_nodes(n1,n2) # wyrzucenie wierzchołka i dodanie jednego spoza grafu
                     if best_move2[2]>delta:
                         best_move2 = (n1,n2,delta)
 
-                
-
-            if best_move1 < best_move2:
+            if best_move1[2]>=0 and best_move2[2]>=0:
+                break
+            elif best_move1[2] < best_move2[2]:
                 self.__reorder_nodes(best_move1[0],best_move1[1])
             else:
                 self.__replace_nodes(best_move2[0],best_move2[1])
-                used_nodes.remove(best_move2[0])
                 unused_nodes.remove(best_move2[1])
-                used_nodes.append(best_move2[1])
                 unused_nodes.append(best_move2[0])
 
-        route_len = self.__get_objective_function_value()
-        print("Route length:",route_len)    
+        print("Route length:",self.__get_objective_function_value())
+        self.show_graph(g,"streepest_nodes.png")
+        self.g = g_copy
         
+    def streepest_edges(self):
+        g = self.g
+        g_copy = self.g.copy()
+        start_node, unused_nodes = self.start_node, self.unused_nodes.copy()
+
+        route_len = self.__get_objective_function_value()
+        print("Route length:", route_len) 
+        
+        while True:
+            best_move1, best_move2 = (0,0,0),(0,0,0) # format: (wierzchołek1,wierzchołek2,wartość delty funkcji celu)
+            n1 = start_node
+            while True:
+                n2 = tuple(g.out_edges(n1))[0][1]
+                n1_prev = tuple(g.in_edges(n1))[0][0]
+                while n2 != n1_prev:
+                    delta = self.__delta_reorder_edge(n1,n2) # zamiana wierzchołków będących w grafie
+                    if best_move1[2]>delta:
+                        best_move1 = (n1,n2,delta)
+                    n2 = tuple(g.out_edges(n2))[0][1]
+                
+                n1 = tuple(g.out_edges(n1))[0][1]
+                if n1 == start_node:
+                    break
+            
 
 
-    def streepest_edges():
-        pass
+                for n2 in unused_nodes:
+                    if n1==n2:
+                        continue
+                    
+                    delta = self.__delta_replace_nodes(n1,n2) # wyrzucenie wierzchołka i dodanie jednego spoza grafu
+                    if best_move2[2]>delta:
+                        best_move2 = (n1,n2,delta)
 
-    def greedy_nodes():
-        pass
+            if best_move1[2]>=0 and best_move2[2]>=0:
+                break
+            elif best_move1[2] < best_move2[2]:
+                self.__reorder_edge(best_move1[0],best_move1[1])
+            else:
+                self.__replace_nodes(best_move2[0],best_move2[1])
+                unused_nodes.remove(best_move2[1])
+                unused_nodes.append(best_move2[0])
 
-    def greedy_edges():
-        pass
+        print("Route length:",self.__get_objective_function_value())
+        self.show_graph(g,"streepest_edges.png")
+        self.g = g_copy
 
-    def show_graph(self):
+    def greedy_nodes(self):
+        g = self.g
+        g_copy = self.g.copy()
+        start_node, unused_nodes = self.start_node, self.unused_nodes.copy()
+
+        route_len = self.__get_objective_function_value()
+        print("Route length:", route_len) 
+        
+        while True:
+            n1 = start_node
+            solutions_list= [] # format (typ,n1,n2)
+            while True:
+                n2 = tuple(g.out_edges(n1))[0][1]
+                n1_prev = tuple(g.in_edges(n1))[0][0]
+                while n2 != n1_prev:
+                    solutions_list.append((1,n1,n2))
+                    n2 = tuple(g.out_edges(n2))[0][1]
+                n1 = tuple(g.out_edges(n1))[0][1]
+                if n1 == start_node:
+                    break
+            
+                for n2 in unused_nodes:
+                    if n1 == n2:
+                        continue
+                    else:
+                        solutions_list.append((2,n1,n2))
+
+            end = True
+            random.shuffle(solutions_list)
+            for s in solutions_list:
+                if s[0] == 1:
+                    if self.__delta_reorder_nodes(s[1],s[2])<0:
+
+                        self.__reorder_nodes(s[1],s[2])
+                        end = False
+                        break
+                else:
+                    if self.__delta_replace_nodes(s[1],s[2])<0:
+                        self.__replace_nodes(s[1],s[2])
+                        unused_nodes.remove(s[2])
+                        unused_nodes.append(s[1])
+                        end=False
+                        break
+            if end:
+                break
+                
+        print("Route length:",self.__get_objective_function_value())
+        self.show_graph(g,"greedy_nodes.png")
+        self.g = g_copy
+
+    def greedy_edges(self):
+        g = self.g
+        g_copy = self.g.copy()
+        start_node, unused_nodes = self.start_node, self.unused_nodes.copy()
+
+        route_len = self.__get_objective_function_value()
+        print("Route length:", route_len) 
+        
+        while True:
+            n1 = start_node
+            solutions_list= [] # format (typ,n1,n2)
+            while True:
+                n2 = tuple(g.out_edges(n1))[0][1]
+                n1_prev = tuple(g.in_edges(n1))[0][0]
+                while n2 != n1_prev:
+                    solutions_list.append((1,n1,n2))
+                    n2 = tuple(g.out_edges(n2))[0][1]
+                n1 = tuple(g.out_edges(n1))[0][1]
+                if n1 == start_node:
+                    break
+            
+                for n2 in unused_nodes:
+                    if n1 == n2:
+                        continue
+                    else:
+                        solutions_list.append((2,n1,n2))
+
+            end = True
+            random.shuffle(solutions_list)
+            for s in solutions_list:
+                if s[0] == 1:
+                    if self.__delta_reorder_edge(s[1],s[2])<0:
+                        self.__reorder_edge(s[1],s[2])
+                        end = False
+                        break
+                else:
+                    if self.__delta_replace_nodes(s[1],s[2])<0:
+                        self.__replace_nodes(s[1],s[2])
+                        unused_nodes.remove(s[2])
+                        unused_nodes.append(s[1])
+                        end=False
+                        break
+            if end:
+                break
+                
+        print("Route length:",self.__get_objective_function_value())
+        self.show_graph(g,"greedy_edges.png")
+        self.g = g_copy
+
+    def show_graph(self,graph,name:str):
         pos = dict(problem.node_coords)
         nx.draw_networkx(graph, pos=pos, font_size=6, node_size=50)
-        plt.savefig("graph.png")
+        plt.savefig(name)
+        plt.clf()
         plt.show()
+        
 
 if __name__ == '__main__':
     #wczytywanie problemu
@@ -183,10 +360,12 @@ if __name__ == '__main__':
     #tworzenie grafu na podstawie problemu
     graph = problem.get_graph().to_directed()
     distance_matrix = nx.to_numpy_matrix(graph)
-    np.savetxt('distance_matrix.txt',distance_matrix,fmt='%.2f')
+    # np.savetxt('distance_matrix.txt',distance_matrix,fmt='%.2f')
 
     # solver robi brr
     lcs = LocalSearchSolver(graph,distance_matrix)
     lcs.streepest_nodes()
-    lcs.show_graph()
+    lcs.streepest_edges()
+    lcs.greedy_nodes()
+    lcs.greedy_edges()
     
