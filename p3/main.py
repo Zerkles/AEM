@@ -1,4 +1,5 @@
 import itertools
+from typing import Set
 
 import tsplib95 as tsp
 import matplotlib.pyplot as plt
@@ -76,6 +77,9 @@ class LocalSearchSolver:
         g = self.g
         e1_prev = tuple(g.in_edges(e1))[0][0]
         e2_next = tuple(g.out_edges(e2))[0][1]
+
+        # print(e1_prev, e1, tuple(g.out_edges(e1))[0][1])
+        # print(tuple(g.in_edges(e2))[0][0], e2, e2_next)
 
         g.remove_edge(e1_prev, e1)
         g.remove_edge(e2, e2_next)
@@ -171,78 +175,38 @@ class LocalSearchSolver:
         self.g = g_copy
         return g, minimum
 
-    @staticmethod
-    def update_moves_list(lst, val):
-        for i in range(0, len(lst)):
-            if val[2] < lst[i][2]:
-                lst.insert(i, val)
-                break
-        return lst
-
-    @staticmethod
-    def remove_from_list(lst, val):
-        removal_list = []
-        for i in range(0, len(lst)):
-            if lst[i][0] == val or lst[i][1] == val:
-                removal_list.append(lst[i])
-        return list(set(lst) - set(removal_list))
-
-    def generate_moves(self, unused_nodes):
+    def update_cache(self, unused_nodes: list, used_nodes: list, cached_moves: dict):
         g = self.g
-        moves_edge, moves_node = [(0, 0, 0)], [(0, 0, 0)]
-        # format: (wierzchołek1,wierzchołek2,wartość delty funkcji celu)
 
-        used_nodes = list(set(g.nodes) - set(unused_nodes))
-        # n1 = random.choice(used_nodes)
         for n1 in used_nodes:
-            best_edge, best_node = (0, 0, 0), (0, 0, 0)
-            n2 = tuple(g.out_edges(n1))[0][1]
-            n1_prev = tuple(g.in_edges(n1))[0][0]
-            while n2 != n1_prev:
-                delta = self.__delta_reorder_edge(n1, n2)  # zamiana wierzchołków będących w grafie
-                if best_edge[2] > delta and (n1, n2, delta) not in moves_edge:
-                    best_edge = (n1, n2, delta)
-                n2 = tuple(g.out_edges(n2))[0][1]
-            moves_edge = self.update_moves_list(moves_edge, best_edge)
-            # print(best_edge)
+            for n2 in used_nodes:
+                if n2 == n1 or n2 == tuple(g.in_edges(n1))[0][0] or n2 == tuple(g.out_edges(n1))[0][1]:
+                    continue
+                move = [x for x in cached_moves["E"] if x[0] == n1 and x[1] == n2]
+                if move != []:
+                    cached_moves["E"].add(move[0])
+                else:
+                    delta = self.__delta_reorder_edge(n1, n2)
+                    if delta < 0:
+                        cached_moves["E"].add((n1, n2, delta))
 
             for n2 in unused_nodes:
                 if n1 == n2:
                     continue
+                move = [x for x in cached_moves["N"] if x[0] == n1 and x[1] == n2]
+                if move != []:
+                    cached_moves["N"].add(move[0])
+                else:
+                    delta = self.__delta_replace_nodes(n1, n2)
+                    if delta < 0:
+                        cached_moves["N"].add((n1, n2, delta))
 
-                delta = self.__delta_replace_nodes(n1, n2)  # wyrzucenie wierzchołka i dodanie jednego spoza grafu
-                if best_node[2] > delta and (n1, n2, delta) not in moves_node:
-                    best_node = (n1, n2, delta)
-            moves_node = self.update_moves_list(moves_node, best_node)
+        return cached_moves
 
-        # moves_node.remove((0, 0, 0))
-        # moves_edge.remove((0, 0, 0))
-        print("moves_node", moves_node)
-        print("moves_edge", moves_edge)
-        return moves_edge, moves_node
-
-        # moves_edge, moves_node = [(0, 0, 0)] * 1000, [(0, 0, 0)] * 1000
-        # g = self.g
-        #
-        # n1 = random.choice(list(set(g.nodes) - set(unused_nodes)))
-        # n2 = tuple(g.out_edges(n1))[0][1]
-        # n1_prev = tuple(g.in_edges(n1))[0][0]
-        # while n2 != n1_prev:
-        #     delta = self.__delta_reorder_edge(n1, n2)  # zamiana wierzchołków będących w grafie
-        #     if delta < moves_edge[-1][2]:
-        #         moves_edge = self.update_moves_list(moves_edge, (n1, n2, delta))
-        #     n2 = tuple(g.out_edges(n2))[0][1]
-        #
-        # for n2 in unused_nodes:
-        #     if n1 == n2:
-        #         continue
-        #     delta = self.__delta_replace_nodes(n1, n2)  # wyrzucenie wierzchołka i dodanie jednego spoza grafu
-        #     if delta < moves_node[-1][2]:
-        #         moves_node = self.update_moves_list(moves_node, (n1, n2, delta))
-        #
-        # # print("moves_node", moves_node)
-        # # print("moves_edge", moves_edge)
-        # return moves_edge, moves_node
+    def remove_from_cache(self, cached_moves, val: list):
+        cached_moves["E"] = set([x for x in cached_moves["E"] if all(x[0] != y and x[1] != y for y in val)])
+        cached_moves["N"] = set([x for x in cached_moves["N"] if all(x[0] != y and x[1] != y for y in val)])
+        return cached_moves
 
     def streepest_edges_with_memory(self):
         g = self.g
@@ -250,55 +214,39 @@ class LocalSearchSolver:
         print("Random route length:", self._get_objective_function_value(g))
 
         unused_nodes = self.unused_nodes.copy()
-        moves_edge, moves_node = self.generate_moves(unused_nodes)
-
+        cached_moves = {"N": set(), "E": set()}
+        update_list = list(set(g.nodes) - set(unused_nodes))
         while True:
-            if len(moves_edge) == 0 or len(moves_node) == 0:
-                moves_edge, moves_node = self.generate_moves(unused_nodes)
+            cached_moves = self.update_cache(unused_nodes, update_list, cached_moves)
 
-            best_edge = moves_edge[0]
-            best_node = moves_node[0]
-            if best_edge[2] >= 0:
+            if not cached_moves["N"]:
+                cached_moves["N"].add((0, 0, 0))
+            if not cached_moves["E"]:
+                cached_moves["E"].add((0, 0, 0))
+
+            best_node = min(cached_moves["N"], key=lambda x: x[2])
+            best_edge = min(cached_moves["E"], key=lambda x: x[2])
+            # print(best_edge, best_node)
+
+            update_list = []
+            if best_edge[2] >= 0 and best_node[2] >= 0:
                 break
-            else:
-                print("best_edge:",best_edge)
+            elif best_edge[2] < best_node[2]:
+                edge_prev = tuple(g.in_edges(best_edge[0]))[0][0]
+                edge_next = tuple(g.out_edges(best_edge[1]))[0][1]
+                update_list.extend([edge_prev, best_edge[0], best_edge[1], edge_next])
                 self.__reorder_edge(best_edge[0], best_edge[1])
-
-                for n in (best_edge[1], best_edge[0]):
-                    n2 = tuple(g.out_edges(n))[0][1]
-                    n1_prev = tuple(g.in_edges(n))[0][0]
-                    best_for_new_node = (0, 0, 0)
-                    while n2 != n1_prev:
-                        delta = self.__delta_reorder_edge(n, n2)  # zamiana wierzchołków będących w grafie
-                        if delta < best_for_new_node[2]:
-                            best_for_new_node = (n, n2, delta)
-                        n2 = tuple(g.out_edges(n2))[0][1]
-
-                if best_for_new_node[2] < moves_edge[-1][2]:
-                    moves_edge = self.update_moves_list(moves_edge, best_for_new_node)
-                moves_edge = self.remove_from_list(moves_edge, best_edge[0])
-            # else:
-            #     print("best_node",best_node)
-            #     print("unusd",unused_nodes)
-            #     self.__replace_nodes(best_node[0], best_node[1])
-            #     unused_nodes.remove(best_node[1])
-            #     unused_nodes.append(best_node[0])
-            #     print("unusd", unused_nodes)
-            #
-            #     best_for_new_node = (0, 0, 0)
-            #     for n in unused_nodes:
-            #         if n == best_node[1]:
-            #             continue
-            #
-            #         delta = self.__delta_replace_nodes(best_node[1], n)
-            #         if delta < best_for_new_node[2]:
-            #             best_for_new_node = (best_node[1], n, delta)
-            #
-            #     if best_for_new_node[2] < moves_node[-1][2]:
-            #         moves_node = self.update_moves_list(moves_node, best_for_new_node)
-            #
-            #     moves_node = self.remove_from_list(moves_node, best_node[0])
-            #     moves_edge = self.remove_from_list(moves_edge, best_node[0])
+                self.remove_from_cache(cached_moves, update_list)
+            else:
+                update_list.extend(
+                    [tuple(g.in_edges(best_node[0]))[0][0], best_node[0], tuple(g.out_edges(best_node[0]))[0][1],
+                     best_node[1]])
+                self.__replace_nodes(best_node[0], best_node[1])
+                unused_nodes.append(best_node[0])
+                unused_nodes.remove(best_node[1])
+                self.remove_from_cache(cached_moves, update_list)
+                update_list.remove(best_node[0])
+            # print("Route length:", self._get_objective_function_value(g))
 
         print("Route length:", self._get_objective_function_value(g))
         self.show_graph(g, "streepest_edges.png")
@@ -315,7 +263,7 @@ class LocalSearchSolver:
 
 if __name__ == '__main__':
     # wczytywanie problemu
-    problem = tsp.load('../data/kroA100.tsp')
+    problem = tsp.load('../data/kroB200.tsp')
     # problem = tsp.load('data/kroB100.tsp')
 
     # tworzenie grafu na podstawie problemu
@@ -335,8 +283,8 @@ if __name__ == '__main__':
         for i in range(0, len(func_list)):
             start_time = time.time()
             g, length = func_list[i]()
-            mean_values[i] += length
             mean_time[i] += time.time() - start_time
+            mean_values[i] += length
 
             if length < min_len[i][1]:
                 min_len[i] = (g, length)
@@ -347,11 +295,11 @@ if __name__ == '__main__':
         for i in range(0, len(L)):
             L[i] = round(L[i] / n, 2)
 
-    # for m in min_len:
-    #     LocalSearchSolver.show_graph(None, m[0], f"min_{m[1]}.png")
-    #
-    # for m in max_len:
-    #     LocalSearchSolver.show_graph(None, m[0], f"max_{m[1]}.png")
+    for m in min_len:
+        LocalSearchSolver.show_graph(None, m[0], f"min_{m[1]}.png")
+
+    for m in max_len:
+        LocalSearchSolver.show_graph(None, m[0], f"max_{m[1]}.png")
 
     print(mean_values)
     print(mean_time)

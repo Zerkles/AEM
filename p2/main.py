@@ -176,7 +176,7 @@ class LocalSearchSolver:
 
         while True:
             best_move1, best_move2 = (0, 0, 0), (
-            0, 0, 0)  # format: (wierzchołek1,wierzchołek2,wartość delty funkcji celu)
+                0, 0, 0)  # format: (wierzchołek1,wierzchołek2,wartość delty funkcji celu)
             n1 = start_node
             while True:
                 n2 = tuple(g.out_edges(n1))[0][1]
@@ -220,7 +220,7 @@ class LocalSearchSolver:
 
         while True:
             best_move1, best_move2 = (0, 0, 0), (
-            0, 0, 0)  # format: (wierzchołek1,wierzchołek2,wartość delty funkcji celu)
+                0, 0, 0)  # format: (wierzchołek1,wierzchołek2,wartość delty funkcji celu)
             n1 = start_node
             while True:
                 n2 = tuple(g.out_edges(n1))[0][1]
@@ -362,7 +362,7 @@ class LocalSearchSolver:
 
 if __name__ == '__main__':
     # wczytywanie problemu
-    problem = tsp.load('../data/kroA100.tsp')
+    problem = tsp.load('../data/kroB200.tsp')
     # problem = tsp.load('data/kroB100.tsp')
 
     # tworzenie grafu na podstawie problemu
@@ -372,18 +372,18 @@ if __name__ == '__main__':
 
     # solver robi brr
     mean_values, mean_time, min_len, max_len = [0] * 5, [0] * 5, [(nx.DiGraph(), 90000)] * 5, [(nx.DiGraph(), 0)] * 5
-    n = 3
+    n = 100
 
     for j in range(0, n):
         print(j)
         lcs = LocalSearchSolver(graph, distance_matrix)
-        func_list = [lcs.random_alg, lcs.streepest_nodes, lcs.streepest_edges, lcs.greedy_nodes, lcs.greedy_edges]
+        func_list = [lcs.streepest_edges]
 
         for i in range(0, len(func_list)):
             start_time = time.time()
             g, length = func_list[i]()
-            mean_values[i] += length
             mean_time[i] += time.time() - start_time
+            mean_values[i] += length
 
             if length < min_len[i][1]:
                 min_len[i] = (g, length)
