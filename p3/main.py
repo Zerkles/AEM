@@ -182,24 +182,16 @@ class LocalSearchSolver:
             for n2 in used_nodes:
                 if n2 == n1 or n2 == tuple(g.in_edges(n1))[0][0] or n2 == tuple(g.out_edges(n1))[0][1]:
                     continue
-                move = [x for x in cached_moves["E"] if x[0] == n1 and x[1] == n2]
-                if move != []:
-                    cached_moves["E"].add(move[0])
-                else:
-                    delta = self.__delta_reorder_edge(n1, n2)
-                    if delta < 0:
-                        cached_moves["E"].add((n1, n2, delta))
+                delta = self.__delta_reorder_edge(n1, n2)
+                if delta < 0:
+                    cached_moves["E"].add((n1, n2, delta))
 
             for n2 in unused_nodes:
                 if n1 == n2:
                     continue
-                move = [x for x in cached_moves["N"] if x[0] == n1 and x[1] == n2]
-                if move != []:
-                    cached_moves["N"].add(move[0])
-                else:
-                    delta = self.__delta_replace_nodes(n1, n2)
-                    if delta < 0:
-                        cached_moves["N"].add((n1, n2, delta))
+                delta = self.__delta_replace_nodes(n1, n2)
+                if delta < 0:
+                    cached_moves["N"].add((n1, n2, delta))
 
         return cached_moves
 
