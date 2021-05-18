@@ -38,7 +38,7 @@ def main(instances_path: str, repeat: int, output_path: str):
     print('[STARTED]')
 
     optimizers = [
-        ILS1, ILS2
+        ILS2  # TODO: Dodać ILS1
     ]
 
     for x in iterate_instances(instances_path):
@@ -86,7 +86,7 @@ def main(instances_path: str, repeat: int, output_path: str):
 
             for oid, Optimizer in enumerate(optimizers, 1):
                 begin = time()
-                opt = Optimizer(distance_matrix, route, 10)
+                opt = Optimizer(distance_matrix, route, 10)  # TODO: Ustawić czas na time_ps
                 solution = opt()
                 end = time()
 

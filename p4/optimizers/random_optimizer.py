@@ -1,4 +1,8 @@
+from collections import deque
+
 from loader import Matrix2D
+
+from .inner_edge_optimizer import LocalInnerEdgeOptimizer
 from .base import TimerOptimizer, Route, Solution, Optimizer
 import numpy as np
 import random
@@ -23,7 +27,7 @@ class MultiStartLocalSearchOptimizer(Optimizer):
 
     def __init__(self, distance_matrix: Matrix2D, route: Route):
         super().__init__(distance_matrix, route)
-        self.n_iter = 100
+        self.n_iter = 2  # TODO: DO ZMIANY NA 100 ITERACJI
 
     def _search(self) -> Solution:
         best_solution = Solution(np.inf, self.route)
@@ -31,9 +35,10 @@ class MultiStartLocalSearchOptimizer(Optimizer):
 
         for _ in range(self.n_iter):
             random.shuffle(route)
+            opt = LocalInnerEdgeOptimizer(self.distance_matrix, route)
+            sol = opt()
 
-            score = self._calculate_score(route)
-            if score < best_solution.cost:
-                best_solution = Solution(score, route[:])
+            if sol.cost < best_solution.cost:
+                best_solution = Solution(sol.cost, sol.route[:])
 
         return best_solution
