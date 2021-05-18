@@ -58,7 +58,7 @@ class ILS1(TimerOptimizer):
             yield best_solution
 
 
-def nng2(distance_matrix: np.ndarray, route: List[int], unused_vertices: Set, to_restore: int) -> List[int]:
+def greedy_cycle(distance_matrix: np.ndarray, route: List[int], unused_vertices: Set, to_restore: int) -> List[int]:
     end_len = len(route) + to_restore
     unused_vertices = list(unused_vertices)
 
@@ -80,37 +80,10 @@ def nng2(distance_matrix: np.ndarray, route: List[int], unused_vertices: Set, to
                 if dst < best_move[2]:
                     best_move = (i, v2, dst)
 
-        route.insert(best_move[0] + 1, best_move[1])
+        route.insert(best_move[0], best_move[1])
         unused_vertices.remove(best_move[1])
 
     return route
-
-
-def nng(distance_matrix: np.ndarray, route, unused_vertices, to_restore: int) -> Route:
-    nearest = []
-    for p in route:
-        n_dist, p_unused = min([distance_matrix[p, uv], uv] for uv in unused_vertices)
-        nearest.append([n_dist, p, p_unused])
-
-    # print('NEAREST', len(nearest))
-    used = 0
-    for _, p, p_unused in sorted(nearest):
-        if p_unused in unused_vertices:
-            i = route.index(p)
-            route.insert(i, p_unused)
-            unused_vertices.remove(p_unused)
-            used += 1
-
-            if used == to_restore:
-                # print('REACHED')
-                break
-    else:
-        # print('Unused', Counter([p_unused for _, p, p_unused in nearest]))
-        # print('Unused vertices', unused_vertices)
-        # print('Po wyjsciu z petli ...', len(unused_vertices))
-        pass
-
-    return Route(route)
 
 
 def perturbations_type2(route: Route, distance_matrix, n_verticies: int, percent: float) -> Route:
@@ -137,10 +110,7 @@ def perturbations_type2(route: Route, distance_matrix, n_verticies: int, percent
         route.remove(v_prev)
 
     to_restore = before_number - len(route)
-    print("Initial route:", before_number, "Actual route:", len(route), "To restore:", to_restore, "Unused:",
-          len(unused_vertices))
-    route = nng2(distance_matrix, route, unused_vertices, to_restore)
-    print("After restore:", len(route))
+    route = greedy_cycle(distance_matrix, route, unused_vertices, to_restore)
 
     return Route(route)
 
@@ -158,11 +128,9 @@ class ILS2(TimerOptimizer):
             if solution.cost < best_solution.cost:
                 best_solution = Solution(solution.cost, solution.route[:])
 
-            print("Cost before pert:", optimal_solution.cost)
             route = perturbations_type2(optimal_solution.route, opt.distance_matrix, vertices, 0.07)
             cost = self.__calculate_cost(route)
             solution = Solution(cost, route[:])
-            print("Cost after pert:", cost)
 
             yield best_solution
 

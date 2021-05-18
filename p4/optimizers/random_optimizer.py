@@ -27,7 +27,7 @@ class MultiStartLocalSearchOptimizer(Optimizer):
 
     def __init__(self, distance_matrix: Matrix2D, route: Route):
         super().__init__(distance_matrix, route)
-        self.n_iter = 2  # TODO: DO ZMIANY NA 100 ITERACJI
+        self.n_iter = 100
 
     def _search(self) -> Solution:
         best_solution = Solution(np.inf, self.route)

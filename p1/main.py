@@ -106,7 +106,6 @@ class Solver:
         g.add_edge(node,start_node)
 
         while g.number_of_edges() != int(g.number_of_nodes()*0.5):
-
             shortest_loop_node = unused_nodes[0]
             _,_,shortest_loop = self.find_shortest_loop(shortest_loop_node,list(g.edges()))
             
