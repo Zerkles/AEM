@@ -115,7 +115,7 @@ def perturbations_type2(route: Route, distance_matrix, n_verticies: int, percent
     return Route(route)
 
 
-class ILS2(TimerOptimizer):
+class ILS2b(TimerOptimizer):
     def _find_solution(self):
         route: Route = self.route[:]
         vertices = len(self.distance_matrix)
@@ -131,6 +131,29 @@ class ILS2(TimerOptimizer):
             route = perturbations_type2(optimal_solution.route, opt.distance_matrix, vertices, 0.07)
             cost = self.__calculate_cost(route)
             solution = Solution(cost, route[:])
+
+            yield best_solution
+
+    def __calculate_cost(self, route):
+        return sum(
+            self.distance_matrix[a, b]
+            if a is not None and b is not None else None
+            for a, b in zip(route, route[1:] + [route[0]])
+        )
+
+
+class ILS2a(TimerOptimizer):
+    def _find_solution(self):
+        vertices = len(self.distance_matrix)
+        best_solution = Solution(np.inf, self.route)
+
+        while True:
+            route = perturbations_type2(best_solution.route, self.distance_matrix, vertices, 0.07)
+            cost = self.__calculate_cost(route)
+            solution = Solution(cost, route[:])
+
+            if solution.cost < best_solution.cost:
+                best_solution = Solution(solution.cost, solution.route[:])
 
             yield best_solution
 

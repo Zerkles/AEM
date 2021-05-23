@@ -12,7 +12,7 @@ import sys
 
 from optimizers import Route, MultiStartLocalSearchOptimizer
 from optimizers.base import Solution
-from optimizers.ils_optimizer.ils_optimizer import ILS1, ILS2
+from optimizers.ils_optimizer.ils_optimizer import ILS1, ILS2b, ILS2a
 
 pd.options.display.max_columns = None
 pd.options.display.max_rows = None
@@ -37,13 +37,12 @@ def visualize_route(route: Route, points, path: str, filename: str):
 def main(instances_path: str, repeat: int, output_path: str):
     print('[STARTED]')
 
-    optimizers = [
-        ILS1, ILS2
-    ]
+    optimizers = [ILS1, ILS2b, ILS2a,
+                  ]
 
     for x in iterate_instances(instances_path):
         t, c = {}, {}
-        best_solutions_routes = [Solution(np.inf, Route([])) for _ in range(3)]
+        best_solutions_routes = [Solution(np.inf, Route([])) for _ in range(len(optimizers)+1)]
         fname, distance_matrix, points = x.name, x.distance_matrix, x.points
 
         routes = []
