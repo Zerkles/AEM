@@ -1,5 +1,4 @@
 from collections import defaultdict
-from typing import List
 
 import pandas as pd
 from sys import argv
@@ -13,7 +12,7 @@ import sys
 from optimizers import Route, MultiStartLocalSearchOptimizer
 from optimizers.base import Solution
 from optimizers.ils_optimizer.ils_optimizer import ILS1, ILS2b, ILS2a
-from p5.optimizers.evolutionary.ils_optimizer import EvoOptimizer
+from optimizers.evolutionary.steaty_state import EvoOptimizer
 
 pd.options.display.max_columns = None
 pd.options.display.max_rows = None
@@ -38,8 +37,7 @@ def visualize_route(route: Route, points, path: str, filename: str):
 def main(instances_path: str, repeat: int, output_path: str):
     print('[STARTED]')
 
-    optimizers = [EvoOptimizer
-                  ]
+    optimizers = [EvoOptimizer]
 
     for x in iterate_instances(instances_path):
         t, c = {}, {}
