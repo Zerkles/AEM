@@ -12,7 +12,7 @@ import sys
 from optimizers import Route, MultiStartLocalSearchOptimizer
 from optimizers.base import Solution
 from optimizers.ils_optimizer.ils_optimizer import ILS1, ILS2b, ILS2a
-from optimizers.evolutionary.steaty_state import EvoOptimizer
+from optimizers.evolutionary.steady_state import EvoRandomSearchOptimizer
 
 pd.options.display.max_columns = None
 pd.options.display.max_rows = None
@@ -37,7 +37,7 @@ def visualize_route(route: Route, points, path: str, filename: str):
 def main(instances_path: str, repeat: int, output_path: str):
     print('[STARTED]')
 
-    optimizers = [EvoOptimizer]
+    optimizers = [EvoRandomSearchOptimizer]
 
     for x in iterate_instances(instances_path):
         t, c = {}, {}
@@ -51,6 +51,8 @@ def main(instances_path: str, repeat: int, output_path: str):
         time_local = []
         tmp_t, tmp_c = [], []
         for i in range(repeat):
+            break
+
             inform.write(f'MSLS [PROGRESS {i + 1}/{repeat}]\n')
             vertices = distance_matrix.shape[0]
             route = Route([*range(vertices // 2)])
@@ -70,9 +72,9 @@ def main(instances_path: str, repeat: int, output_path: str):
             if solution.cost < best_solutions_routes[0].cost:
                 best_solutions_routes[0] = solution
 
-        c[MultiStartLocalSearchOptimizer.__name__] = tmp_c
-        t[MultiStartLocalSearchOptimizer.__name__] = tmp_t
-        time_ps = np.mean(time_local)
+        # c[MultiStartLocalSearchOptimizer.__name__] = tmp_c
+        # t[MultiStartLocalSearchOptimizer.__name__] = tmp_t
+        # time_ps = np.mean(time_local)
 
         tmp_t, tmp_c = defaultdict(lambda: []), defaultdict(lambda: [])
         for i in range(repeat):
@@ -84,7 +86,7 @@ def main(instances_path: str, repeat: int, output_path: str):
 
             for oid, Optimizer in enumerate(optimizers, 1):
                 begin = time()
-                opt = Optimizer(distance_matrix, route, time_ps)
+                opt = Optimizer(distance_matrix, route, 60)
                 solution = opt()
                 end = time()
 
@@ -118,8 +120,16 @@ def main(instances_path: str, repeat: int, output_path: str):
         print(df_cost)
 
         inform.write('[VISUALISING]\n')
-        for method, bs in zip([MultiStartLocalSearchOptimizer.__name__,
-                               *[o.__name__ for o in optimizers]], best_solutions_routes):
+
+        #TODO: !!!
+        # for method, bs in zip([MultiStartLocalSearchOptimizer.__name__,
+        #                        *[o.__name__ for o in optimizers]], best_solutions_routes):
+
+        for method, bs in zip([MultiStartLocalSearchOptimizer.__name__, *[o.__name__ for o in optimizers]],
+                              best_solutions_routes):
+            if not len(bs.route):
+                continue
+
             visualize_route(bs.route, points, output_path, f'{fname}_{method}')
 
     inform.write('[FINISHED]\n')
