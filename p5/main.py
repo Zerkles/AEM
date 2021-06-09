@@ -86,7 +86,7 @@ def main(instances_path: str, repeat: int, output_path: str):
 
             for oid, Optimizer in enumerate(optimizers, 1):
                 begin = time()
-                opt = Optimizer(distance_matrix, route, 60)
+                opt = Optimizer(distance_matrix, route, 20)
                 solution = opt()
                 end = time()
 
