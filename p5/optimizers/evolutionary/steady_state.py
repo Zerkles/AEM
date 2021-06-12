@@ -7,7 +7,7 @@ import random
 
 
 class EvoRandomSearchOptimizer(TimerOptimizer):
-    MUTATION_PROBA = 0.1
+    MUTATION_PROBA = 0.2
 
     @staticmethod
     def __parents_selection(population: List[Solution]) -> Tuple[Route, Route]:
@@ -23,18 +23,31 @@ class EvoRandomSearchOptimizer(TimerOptimizer):
 
             common_sub_seq.extend(list(x & y))
 
-        selected_seq = random.choice(common_sub_seq)[:]
         child = random.choice([parent_a, parent_b])[:]
 
-        insert_pos = random.choice(range(len(child) - len(selected_seq)))
-        child = [*child[:insert_pos], selected_seq, *child[insert_pos + len(selected_seq):]]
+        random.shuffle(common_sub_seq)
+        for selected_seq in common_sub_seq:
+            possible_inserts = list(range(len(child) - len(selected_seq)))
+            random.shuffle(possible_inserts)
 
-        return Route(child)
+            for insert_pos in possible_inserts:
+                new_child = [*child[:insert_pos], *selected_seq, *child[insert_pos + len(selected_seq):]]
+                if len(set(child)) == len(set(new_child)):
+                    child = new_child
+                    return Route(child)
+        else:
+            raise ValueError('seq error')
 
     def __mutation(self, child: Route) -> Route:
         unused = {*range(len(self.distance_matrix))} - {*child}
-        return Route([p if np.random.uniform() < (1 - self.MUTATION_PROBA) else np.random.choice(list(unused))
-                      for p in child])
+        for p in range(len(child)):
+            if np.random.uniform() > (1 - self.MUTATION_PROBA):
+                v = np.random.choice(list(unused))
+                unused.remove(v)
+                unused.add(child[p])
+                child[p] = v
+
+        return child
 
     def _find_solution(self):
         initial_population_size = 20

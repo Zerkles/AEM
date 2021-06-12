@@ -21,6 +21,9 @@ pd.options.display.max_rows = None
 def visualize_route(route: Route, points, path: str, filename: str):
     fig, ax = plt.subplots()
 
+    x, y = [v_id[1] for v_id in points if v_id[0] not in route], [v_id[2] for v_id in points if v_id[0] not in route]
+    ax.scatter(x, y)
+
     x, y = [points[v_id][1] for v_id in route], [points[v_id][2] for v_id in route]
 
     x.append(x[0])
@@ -29,8 +32,6 @@ def visualize_route(route: Route, points, path: str, filename: str):
     ax.scatter(x, y)
     ax.plot(x, y)
 
-    x, y = [v_id[1] for v_id in points if v_id not in route], [v_id[2] for v_id in points if v_id not in route]
-    ax.scatter(x, y)
     fig.savefig(path + '/' + filename)
 
 
@@ -48,11 +49,8 @@ def main(instances_path: str, repeat: int, output_path: str):
         print('[INSTANCE]', fname)
         inform.write(f'[INSTANCE] {fname}\n')
 
-        time_local = []
         tmp_t, tmp_c = [], []
         for i in range(repeat):
-            break
-
             inform.write(f'MSLS [PROGRESS {i + 1}/{repeat}]\n')
             vertices = distance_matrix.shape[0]
             route = Route([*range(vertices // 2)])
@@ -64,7 +62,6 @@ def main(instances_path: str, repeat: int, output_path: str):
             solution = opt()
 
             end = time()
-            time_local.append(end - begin)
 
             tmp_t.append(end - begin)
             tmp_c.append(solution.cost)
@@ -72,21 +69,21 @@ def main(instances_path: str, repeat: int, output_path: str):
             if solution.cost < best_solutions_routes[0].cost:
                 best_solutions_routes[0] = solution
 
-        # c[MultiStartLocalSearchOptimizer.__name__] = tmp_c
-        # t[MultiStartLocalSearchOptimizer.__name__] = tmp_t
-        # time_ps = np.mean(time_local)
+        c[MultiStartLocalSearchOptimizer.__name__] = tmp_c
+        t[MultiStartLocalSearchOptimizer.__name__] = tmp_t
+        time_ps: float = np.mean(tmp_t)
 
         tmp_t, tmp_c = defaultdict(lambda: []), defaultdict(lambda: [])
         for i in range(repeat):
-            inform.write(f'[PROGRESS {i + 1}/{repeat}]\n')
             vertices = distance_matrix.shape[0]
             route = Route([*range(vertices // 2)])
             random.shuffle(route)
             routes.append(route)
 
             for oid, Optimizer in enumerate(optimizers, 1):
+                inform.write(f'{Optimizer.__name__} [PROGRESS {i + 1}/{repeat}]\n')
                 begin = time()
-                opt = Optimizer(distance_matrix, route, 20)
+                opt = Optimizer(distance_matrix, route, time_ps)
                 solution = opt()
                 end = time()
 
@@ -121,14 +118,8 @@ def main(instances_path: str, repeat: int, output_path: str):
 
         inform.write('[VISUALISING]\n')
 
-        #TODO: !!!
-        # for method, bs in zip([MultiStartLocalSearchOptimizer.__name__,
-        #                        *[o.__name__ for o in optimizers]], best_solutions_routes):
-
         for method, bs in zip([MultiStartLocalSearchOptimizer.__name__, *[o.__name__ for o in optimizers]],
                               best_solutions_routes):
-            if not len(bs.route):
-                continue
 
             visualize_route(bs.route, points, output_path, f'{fname}_{method}')
 
