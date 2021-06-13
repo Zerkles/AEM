@@ -24,6 +24,7 @@ class EvoRandomSearchOptimizer(TimerOptimizer):
             common_sub_seq.extend(list(x & y))
 
         child = random.choice([parent_a, parent_b])[:]
+        vertices = len(set(child))
 
         random.shuffle(common_sub_seq)
         for selected_seq in common_sub_seq:
@@ -32,9 +33,8 @@ class EvoRandomSearchOptimizer(TimerOptimizer):
 
             for insert_pos in possible_inserts:
                 new_child = [*child[:insert_pos], *selected_seq, *child[insert_pos + len(selected_seq):]]
-                if len(set(child)) == len(set(new_child)):
-                    child = new_child
-                    return Route(child)
+                if vertices == len(set(new_child)):
+                    return Route(new_child)
         else:
             raise ValueError('seq error')
 
