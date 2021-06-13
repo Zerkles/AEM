@@ -13,7 +13,7 @@ from ...loader import Matrix2D
 class GlobalConvexityOptimizer(Optimizer):
     def __init__(self, distance_matrix, points):
         super().__init__(distance_matrix, points)
-        self.n_iter = 100
+        self.n_iter = 1000
 
     def _get_edges(self, solution):
         edges = set()
@@ -33,32 +33,31 @@ class GlobalConvexityOptimizer(Optimizer):
         return results
 
     def _calc_similarities_vertex(self, solutions: List[Solution], best_solution: Solution):
-        solutions_sets = []
-        best_solution_set = set(best_solution.route)
+        solutions_vertexlists = []
+        best_solution_vertexlist = set(best_solution.route)
 
         for s in solutions:
-            solutions_sets.append((s.cost, set(s.route)))
+            solutions_vertexlists.append((s.cost, set(s.route)))
 
-        return self._compare_solutions(solutions_sets, best_solution_set)
+        return self._compare_solutions(solutions_vertexlists, best_solution_vertexlist)
 
     def _calc_similarities_edge(self, solutions: List[Solution], best_solution: Solution):
-        solutions_sets = []
-        best_solution_set = self._get_edges(best_solution)
+        solutions_edgelists = []
+        best_solution_edgelist = self._get_edges(best_solution)
 
         for s in solutions:
-            solutions_sets.append((s.cost, self._get_edges(s)))
+            solutions_edgelists.append((s.cost, self._get_edges(s)))
 
-        return self._compare_solutions(solutions_sets, best_solution_set)
+        return self._compare_solutions(solutions_edgelists, best_solution_edgelist)
 
     def _search(self):
         best_solution = Solution(np.inf, self.route)
         vertices = self.distance_matrix.shape[0]
-        route: Route = Route([*range(vertices // 2)])
-
+        route: Route = Route(random.sample(range(0, vertices), int(vertices / 2)))
         solutions = [LocalInnerEdgeOptimizer(self.distance_matrix, route)()]
 
         for _ in range(self.n_iter):
-            route: Route = Route([*range(vertices // 2)])
+            route: Route = Route(random.sample(range(0, vertices), int(vertices / 2)))
             opt = LocalInnerEdgeOptimizer(self.distance_matrix, route)
             sol = opt()
 

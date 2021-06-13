@@ -3,6 +3,10 @@ from typing import List
 
 import pandas as pd
 from sys import argv
+
+from numpy import cov
+from scipy.stats import pearsonr
+
 from loader import iterate_instances
 from time import time
 import random
@@ -22,12 +26,14 @@ pd.options.display.max_rows = None
 def visualize(data, filename, path):
     plt.title(filename)
 
-    x_ax = [x[0] for x in data]
-    y_ax_best = [x[1] for x in data]
-    y_ax_avg = [x[2] for x in data]
+    x_cost = [x[0] for x in data]
+    y_best = [x[1] for x in data]
+    y_avg = [x[2] for x in data]
+    print(filename + "| Coefficients Cost-Best:", pearsonr(x_cost, y_best))
+    print(filename + "| Coefficients Cost-Average:", pearsonr(x_cost, y_avg))
 
-    plt.plot(x_ax, y_ax_best, label="Similarity to best solution")
-    plt.plot(x_ax, y_ax_avg, label="Average similarity to other solutions")
+    plt.plot(x_cost, y_best, label="Similarity to best solution")
+    plt.plot(x_cost, y_avg, label="Average similarity to other solutions")
     plt.xlabel("Target function value")
     plt.xlabel("% of similarity")
     plt.legend()
@@ -48,8 +54,8 @@ def main(instances_path: str, repeat: int, output_path: str):
 
         v_sim, e_sim = GlobalConvexityOptimizer(distance_matrix, points)()
 
-        visualize(v_sim, fname+"_VertexGlobalConvexity", output_path)
-        visualize(v_sim, fname+"_EdgeGlobalConvexity", output_path)
+        visualize(v_sim, fname + "_VertexGlobalConvexity", output_path)
+        visualize(e_sim, fname + "_EdgeGlobalConvexity", output_path)
 
     inform.write('[FINISHED]\n')
 
