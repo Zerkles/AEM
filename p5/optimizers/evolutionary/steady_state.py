@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
 from ..base import TimerOptimizer, Route, Solution
-from .. import LocalInnerEdgeOptimizer
+from .. import LocalInnerEdgeOptimizer, GlobalInnerEdgeOptimizer
 import numpy as np
 import random
 

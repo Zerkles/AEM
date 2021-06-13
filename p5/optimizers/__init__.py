@@ -1,4 +1,4 @@
 from .base import Route
-from .random_optimizer import RandomOptimizer, MultiStartLocalSearchOptimizer
+from .random_optimizer import RandomOptimizer, MultiStartLocalSearchOptimizer, AdaptiveMultiStartLocalSearchOptimizer
 from .inner_vertex_optimizer import LocalInnerVertexOptimizer, GlobalInnerVertexOptimizer
 from .inner_edge_optimizer import LocalInnerEdgeOptimizer, GlobalInnerEdgeOptimizer

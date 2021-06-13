@@ -38,6 +38,14 @@ class GlobalInnerEdgeOptimizer(GlobalNeighborOptimizer, InnerEdgeOptimizer):
             return Solution(np.inf, Route([]))
 
 
+class AlternateNodeLocalSearch(GlobalNeighborOptimizer, InnerEdgeOptimizer):
+    def _find_best_solution(self, route: Route) -> Solution:
+        try:
+            return min([*self._generate_solutions(route)], key=lambda x: x.cost)
+        except ValueError:
+            return Solution(np.inf, Route([]))
+
+
 class LocalInnerEdgeOptimizer(LocalNeighborOptimizer, InnerEdgeOptimizer):
     def _find_solutions(self, route: Route) -> List[Solution]:
         route = self._randomize_starting_point(route)
