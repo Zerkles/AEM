@@ -72,9 +72,9 @@ def main(instances_path: str, repeat: int, output_path: str):
             if solution.cost < best_solutions_routes[0].cost:
                 best_solutions_routes[0] = solution
 
-        # c[MultiStartLocalSearchOptimizer.__name__] = tmp_c
-        # t[MultiStartLocalSearchOptimizer.__name__] = tmp_t
-        # time_ps = np.mean(time_local)
+        c[MultiStartLocalSearchOptimizer.__name__] = tmp_c
+        t[MultiStartLocalSearchOptimizer.__name__] = tmp_t
+        time_ps = np.mean(time_local)
 
         tmp_t, tmp_c = defaultdict(lambda: []), defaultdict(lambda: [])
         for i in range(repeat):
@@ -88,6 +88,7 @@ def main(instances_path: str, repeat: int, output_path: str):
                 begin = time()
                 opt = Optimizer(distance_matrix, route, 20)
                 solution = opt()
+                inform.write(str(solution.cost))
                 end = time()
 
                 tmp_t[Optimizer.__name__].append(end - begin)
